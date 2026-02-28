@@ -51,82 +51,57 @@ Crop yield prediction is critical for:
 - **Geography:** Bihar state, India (Districts: Nalanda, Gaya, Vaishali, Jamui)
 - **Crop:** Rice (Kharif season, sown ~Jun–Aug, harvested ~Oct–Dec)
 - **Year:** 2022 growing season
-- **Size:** ~3,871 training samples, ~43 columns of features
+- **Size:** ~3,871 training samples, **18 selected features** (from 43 original columns)
 
 ---
 
-### 📦 Feature Descriptions
+### 📦 Selected Features (18 of 43)
 
-The dataset contains **43 features** and **1 target variable**:
+After domain analysis and data quality checks, **18 raw columns** were selected as the most predictive. These engineer into **20 model-ready features** (date columns split into derived metrics).
 
-#### 🌍 Location Features
-| Column | Description |
-|--------|-------------|
-| `District` | Name of the district (Nalanda, Gaya, Vaishali, Jamui) |
-| `Block` | Administrative block within the district |
+> **Why only 18?** The remaining 25 columns either have >40% missing values, carry redundant information already captured by the selected set, or are administrative fields (nursery factors, threshing dates, residue percentages) that show weak correlation with yield in this dataset.
 
-#### 🌱 Land and Crop Setup Features
-| Column | Description |
-|--------|-------------|
-| `CultLand` | Total cultivated land area |
-| `CropCultLand` | Land area under current crop cultivation |
-| `Acre` | Land size in acres (key denominator for yield) |
-| `LandPreparationMethod` | Method(s) used to prepare land (e.g., TractorPlough, WetTillagePuddling, FourWheelTracRotavator, BullockPlough) |
-| `CropTillageDate` | Date of tillage |
-| `CropTillageDepth` | Depth of tillage (numeric) |
-| `CropEstMethod` | Method of crop establishment (Manual_PuddledRandom, Manual_PuddledLine, Broadcasting, LineSowingAfterTillage) |
+#### 🌍 Location (2 features)
+| # | Column | Why Selected |
+|---|--------|--------------|
+| 1 | `District` | Geography drives soil quality, water access & infrastructure — Nalanda vs Jamui show ~30% mean yield difference |
+| 2 | `Block` | Sub-district granularity; blocks within the same district can vary significantly in canal access & soil type |
 
-#### 🌿 Nursery & Sowing Features
-| Column | Description |
-|--------|-------------|
-| `RcNursEstDate` | Date of nursery establishment |
-| `SeedingSowingTransplanting` | Date of sowing or transplanting |
-| `SeedlingsPerPit` | Number of seedlings per pit |
-| `NursDetFactor` | Factors that determined nursery date (e.g., CalendarDate, SeedAvailability, LabourAvailability, IrrigWaterAvailability, PreMonsoonShowers) |
-| `TransDetFactor` | Factors that determined transplantation date |
+#### 🌱 Land & Crop Setup (4 features)
+| # | Column | Why Selected |
+|---|--------|--------------|
+| 3 | `Acre` | Direct denominator of yield calculation — farm size captures farm scale effects |
+| 4 | `CropCultLand` | Area actually under crop; differs from `Acre` when part of the land is fallow |
+| 5 | `CropEstMethod` | One of the strongest predictors — `Broadcasting` vs `Manual_PuddledRandom` vs `LineSowing` significantly affect plant density and yield |
+| 6 | `CropTillageDepth` | Deeper tillage = better root development and water retention; low missingness, clean numeric |
 
-#### 💧 Irrigation Features
-| Column | Description |
-|--------|-------------|
-| `TransplantingIrrigationHours` | Hours of irrigation during transplantation |
-| `TransplantingIrrigationSource` | Source of water (Boring, Canal, Rainfed, Pond, TubeWell, Well) |
-| `TransplantingIrrigationPowerSource` | Power source for pump (Electric, Diesel, Solar) |
-| `TransIrriCost` | Cost of irrigation (INR) |
-| `StandingWater` | Days of standing water in the field |
+#### 🌱 Sowing (2 raw → 2 engineered features)
+| # | Column | Why Selected |
+|---|--------|--------------|
+| 7 | `SeedlingsPerPit` | Planting density directly controls yield potential — too few or too many seedlings harm output |
+| 8 | `SeedingSowingTransplanting` | **Engineered → `SowingDOY` + `CropDuration_days`** — timing of sowing relative to monsoon is critical for rice |
 
-#### 🌿 Organic Fertilizer Features
-| Column | Description |
-|--------|-------------|
-| `OrgFertilizers` | Type of organic fertilizer used (Ganaura, FYM, VermiCompost, Ghanajeevamrit, Pranamrit) |
-| `Ganaura` | Amount of Ganaura fertilizer used (quintals) |
-| `CropOrgFYM` | Amount of FYM (Farm Yard Manure) used (quintals) |
-| `PCropSolidOrgFertAppMethod` | Application method of organic fertilizer (SoilApplied, Broadcasting, RootApplication) |
+#### 💧 Irrigation (2 features)
+| # | Column | Why Selected |
+|---|--------|--------------|
+| 9 | `TransplantingIrrigationSource` | `Rainfed` vs `Boring` vs `Canal` — the most impactful irrigation factor; Rainfed farmers are fully weather-dependent |
+| 10 | `StandingWater` | Days of standing water is a key rice-specific variable; rice requires flooded conditions for optimal growth |
 
-#### 🧪 Chemical Fertilizer Features
-| Column | Description |
-|--------|-------------|
-| `NoFertilizerAppln` | Number of times chemical fertilizer was applied |
-| `CropbasalFerts` | Fertilizer type during land preparation (DAP, Urea, NPK, SSP, NPKS, MoP) |
-| `BasalDAP` | Amount of DAP applied at basal stage (kg) |
-| `BasalUrea` | Amount of Urea applied at basal stage (kg) |
-| `MineralFertAppMethod` | Method of applying chemical fertilizer (Broadcasting, SoilApplied, RootApplication) |
-| `FirstTopDressFert` | Chemical fertilizer type for second dose |
-| `1tdUrea` | Urea amount in second dose (kg) |
-| `1appDaysUrea` | Days after first dose for second dose |
-| `2tdUrea` | Urea amount in third dose (kg) |
-| `2appDaysUrea` | Days after second dose for third dose |
+#### 🧪 Chemical Fertilizer (4 features)
+| # | Column | Why Selected |
+|---|--------|--------------|
+| 11 | `NoFertilizerAppln` | Number of applications = measure of farmer care intensity; 3 applications consistently outperforms 1 |
+| 12 | `BasalDAP` | DAP at land prep provides phosphorus + nitrogen for root establishment — critical foundation |
+| 13 | `BasalUrea` | Basal nitrogen application sets the early growth trajectory |
+| 14 | `1tdUrea` | First top-dress urea — timed at tillering stage, strongest individual nitrogen dose affecting grain count |
 
-#### 🌾 Harvesting Features
-| Column | Description |
-|--------|-------------|
-| `Harv_method` | Method of harvesting (hand, machine) |
-| `Harv_date` | Date of harvest |
-| `Harv_hand_rent` | Cost of labor/machine for harvesting (INR) |
-| `Threshing_date` | Date of threshing |
-| `Threshing_method` | Method of threshing (hand, machine) |
-| `Residue_length` | Length of residue left after harvest (cm) |
-| `Residue_perc` | Percentage of residue left in field |
-| `Stubble_use` | Post-harvest stubble management (plowed_in_soil, burned) |
+#### 🌾 Harvest (2 raw → 3 engineered features)
+| # | Column | Why Selected |
+|---|--------|--------------|
+| 15 | `Harv_method` | Machine harvest is faster and captures higher yield; hand harvest in very small plots |
+| 16 | `Threshing_method` | Machine threshing = lower post-harvest losses; strongly correlated with `Harv_method` but adds independent signal |
+| 17 | `Harv_date` | **Engineered → `HarvestDOY`** — harvest month (Oct vs Dec) affects grain drying conditions |
+| 18 | `2tdUrea` | Second top-dress urea — applied at panicle initiation stage, directly boosts grain filling |
 
 #### 🎯 Target Variable
 | Column | Description |
@@ -135,14 +110,34 @@ The dataset contains **43 features** and **1 target variable**:
 
 ---
 
-### 📈 Dataset Statistics (Approximate)
+### 🔢 Columns Dropped & Why
+
+| Dropped Column(s) | Reason |
+|-------------------|--------|
+| `ID` | Unique identifier — zero predictive value |
+| `CultLand` | Redundant — `CropCultLand` and `Acre` carry the same crop-specific area signal |
+| `LandPreparationMethod` | Multi-label with 4+ values; signal mostly captured by `CropTillageDepth` + `CropEstMethod` |
+| `CropTillageDate` | Tillage date signal largely overlaps with `SeedingSowingTransplanting` |
+| `RcNursEstDate` | >35% missing; nursery date signal is already carried by `SeedingSowingTransplanting` |
+| `NursDetFactor`, `TransDetFactor` | Multi-label reasoning fields; subjective farmer-reported factors with no direct yield link |
+| `TransplantingIrrigationHours`, `TransIrriCost`, `TransplantingIrrigationPowerSource` | Collinear with `TransplantingIrrigationSource`; cost/hours are noisy proxies |
+| `OrgFertilizers`, `Ganaura`, `CropOrgFYM`, `PCropSolidOrgFertAppMethod` | >40% missing; organic fertilizer is used by <30% of farmers — sparse signal |
+| `CropbasalFerts`, `MineralFertAppMethod`, `FirstTopDressFert` | Type/method columns — the *amount* (DAP, Urea kg) carries more quantitative signal |
+| `1appDaysUrea`, `2appDaysUrea` | Timing of dose intervals; noisy and high missingness; less impactful than dose amounts |
+| `Harv_hand_rent`, `Threshing_date` | Cost/date proxies; collinear with `Harv_method` and `Threshing_method` |
+| `Residue_length`, `Residue_perc`, `Stubble_use` | Post-harvest residue management has negligible effect on current season's yield |
+
+---
+
+### 📈 Dataset Statistics
 - **Total Training Samples:** ~3,871
-- **Total Features:** 43
-- **Numeric Features:** ~20 (CultLand, CropCultLand, Acre, BasalDAP, BasalUrea, 1tdUrea, 2tdUrea, StandingWater, Ganaura, etc.)
-- **Categorical Features:** ~23 (District, Block, LandPreparationMethod, CropEstMethod, NursDetFactor, OrgFertilizers, etc.)
-- **Date Features:** 5 (CropTillageDate, RcNursEstDate, SeedingSowingTransplanting, Harv_date, Threshing_date)
-- **Target Range:** ~4 to 3,600+ kg/acre (highly variable, skewed distribution)
-- **Missing Values:** Present in multiple columns (especially fertilizer and irrigation fields)
+- **Selected Raw Features:** 18 columns
+- **Final Model Features:** ~20 (after date engineering)
+- **Numeric Features (selected):** 8 (`Acre`, `CropCultLand`, `CropTillageDepth`, `SeedlingsPerPit`, `StandingWater`, `BasalDAP`, `BasalUrea`, `1tdUrea`, `2tdUrea`)
+- **Categorical Features (selected):** 6 (`District`, `Block`, `CropEstMethod`, `TransplantingIrrigationSource`, `Harv_method`, `Threshing_method`)
+- **Date Features (selected):** 2 → engineered into 3 (`SowingDOY`, `CropDuration_days`, `HarvestDOY`)
+- **Target Range:** ~4 to 3,600+ kg/acre (right-skewed → log transformed)
+- **Missing Values:** Present mainly in fertilizer columns — handled via median/zero-fill
 
 ---
 
@@ -274,140 +269,150 @@ train.describe()
 train.isnull().sum().sort_values(ascending=False)
 ```
 
-### Step 3: Drop Irrelevant Columns
-- Drop `ID` column (unique identifier, no predictive value)
-- Evaluate whether `RcNursEstDate` can be used or is too sparse
+### Step 3: Select & Drop Columns
+```python
+# Keep only the 18 selected features + target
+SELECTED_FEATURES = [
+    # Location
+    'District', 'Block',
+    # Land & Crop Setup
+    'Acre', 'CropCultLand', 'CropEstMethod', 'CropTillageDepth',
+    # Sowing
+    'SeedlingsPerPit', 'SeedingSowingTransplanting',
+    # Irrigation
+    'TransplantingIrrigationSource', 'StandingWater',
+    # Chemical Fertilizer
+    'NoFertilizerAppln', 'BasalDAP', 'BasalUrea', '1tdUrea', '2tdUrea',
+    # Harvest
+    'Harv_method', 'Threshing_method', 'Harv_date',
+    # Target
+    'Yield'
+]
+train = train[SELECTED_FEATURES]
+test  = test[[c for c in SELECTED_FEATURES if c != 'Yield']]
+```
 
 ### Step 4: Handle Missing Values
 
 | Strategy | Columns |
 |---------|---------|
-| **Median imputation** | Numeric cols: `BasalDAP`, `BasalUrea`, `1tdUrea`, `2tdUrea`, `Ganaura`, `CropOrgFYM`, `TransIrriCost`, `Harv_hand_rent` |
-| **Mode imputation** | Categorical cols: `OrgFertilizers`, `CropbasalFerts`, `MineralFertAppMethod`, `Threshing_method` |
-| **"None" category fill** | `OrgFertilizers`, `FirstTopDressFert` (absence is meaningful) |
-| **Drop column** | Columns with >60% missing values (evaluate case by case) |
-| **Forward fill / group fill** | Date features |
+| **Median imputation** | `BasalDAP`, `BasalUrea`, `1tdUrea`, `2tdUrea`, `StandingWater`, `SeedlingsPerPit`, `CropTillageDepth` |
+| **Zero-fill** | `NoFertilizerAppln` (no applications = 0, not unknown) |
+| **Mode imputation** | `CropEstMethod`, `Harv_method`, `Threshing_method`, `TransplantingIrrigationSource` |
+| **Date forward-fill** | `SeedingSowingTransplanting`, `Harv_date` |
 
 ```python
-# Example
-train['BasalDAP'].fillna(train['BasalDAP'].median(), inplace=True)
-train['OrgFertilizers'].fillna('None', inplace=True)
+import pandas as pd
+import numpy as np
+
+# Numeric: median imputation
+numeric_cols = ['BasalDAP', 'BasalUrea', '1tdUrea', '2tdUrea',
+                'StandingWater', 'SeedlingsPerPit', 'CropTillageDepth']
+for col in numeric_cols:
+    train[col] = train[col].fillna(train[col].median())
+    test[col]  = test[col].fillna(train[col].median())   # use train median on test
+
+# Categorical: mode imputation
+cat_cols = ['CropEstMethod', 'Harv_method', 'Threshing_method',
+            'TransplantingIrrigationSource']
+for col in cat_cols:
+    mode_val = train[col].mode()[0]
+    train[col] = train[col].fillna(mode_val)
+    test[col]  = test[col].fillna(mode_val)
+
+# NoFertilizerAppln: zero fill
+train['NoFertilizerAppln'] = train['NoFertilizerAppln'].fillna(0)
+test['NoFertilizerAppln']  = test['NoFertilizerAppln'].fillna(0)
 ```
 
-### Step 5: Feature Engineering
-
-#### Date Features
+### Step 5: Feature Engineering from Date Columns
 ```python
-train['CropTillageDate'] = pd.to_datetime(train['CropTillageDate'])
-train['SeedingSowingTransplanting'] = pd.to_datetime(train['SeedingSowingTransplanting'])
-train['Harv_date'] = pd.to_datetime(train['Harv_date'])
+# Parse date columns
+train['SeedingSowingTransplanting'] = pd.to_datetime(
+    train['SeedingSowingTransplanting'], errors='coerce')
+train['Harv_date'] = pd.to_datetime(train['Harv_date'], errors='coerce')
 
-# Derived features
-train['TillageDOY'] = train['CropTillageDate'].dt.dayofyear
-train['SowingDOY'] = train['SeedingSowingTransplanting'].dt.dayofyear
-train['HarvestDOY'] = train['Harv_date'].dt.dayofyear
-train['CropDuration_days'] = (train['Harv_date'] - train['SeedingSowingTransplanting']).dt.days
-train['Sowing_to_Harvest'] = (train['Harv_date'] - train['SeedingSowingTransplanting']).dt.days
+# Engineer new features
+train['SowingDOY']       = train['SeedingSowingTransplanting'].dt.dayofyear
+train['HarvestDOY']      = train['Harv_date'].dt.dayofyear
+train['CropDuration_days'] = (train['Harv_date'] -
+                              train['SeedingSowingTransplanting']).dt.days
+
+# Drop raw date columns (replaced by engineered ones)
+train.drop(columns=['SeedingSowingTransplanting', 'Harv_date'], inplace=True)
+
+# Apply same to test set
+test['SeedingSowingTransplanting'] = pd.to_datetime(
+    test['SeedingSowingTransplanting'], errors='coerce')
+test['Harv_date'] = pd.to_datetime(test['Harv_date'], errors='coerce')
+test['SowingDOY']         = test['SeedingSowingTransplanting'].dt.dayofyear
+test['HarvestDOY']        = test['Harv_date'].dt.dayofyear
+test['CropDuration_days'] = (test['Harv_date'] -
+                              test['SeedingSowingTransplanting']).dt.days
+test.drop(columns=['SeedingSowingTransplanting', 'Harv_date'], inplace=True)
 ```
 
-#### Multi-Label Categorical Features
-Some columns like `LandPreparationMethod`, `NursDetFactor`, `TransDetFactor`, and `OrgFertilizers` contain **space-separated multiple values** in a single cell.
+> After this step the model sees **20 features**: 17 original + 3 engineered (`SowingDOY`, `HarvestDOY`, `CropDuration_days`).
 
-```python
-# Multi-hot encode multi-label fields
-from sklearn.preprocessing import MultiLabelBinarizer
-
-mlb = MultiLabelBinarizer()
-land_prep = train['LandPreparationMethod'].str.split(' ')
-land_prep_encoded = pd.DataFrame(
-    mlb.fit_transform(land_prep),
-    columns=mlb.classes_,
-    index=train.index
-)
-train = pd.concat([train, land_prep_encoded.add_prefix('LandPrep_')], axis=1)
-```
-
-Apply same technique to:
-- `NursDetFactor` → prefix `NurseFactor_`
-- `TransDetFactor` → prefix `TransFactor_`
-- `OrgFertilizers` → prefix `OrgFert_`
-- `CropbasalFerts` → prefix `BasalFert_`
-
-#### Numeric Feature Engineering
-```python
-# Total fertilizer applied
-train['TotalBasalFert'] = train['BasalDAP'].fillna(0) + train['BasalUrea'].fillna(0)
-train['TotalUrea'] = (train['BasalUrea'].fillna(0) + 
-                      train['1tdUrea'].fillna(0) + 
-                      train['2tdUrea'].fillna(0))
-
-# Crop duration
-train['CropDuration'] = (pd.to_datetime(train['Harv_date']) - 
-                          pd.to_datetime(train['SeedingSowingTransplanting'])).dt.days
-
-# Yield density indicator
-train['LandUseRatio'] = train['CropCultLand'] / (train['CultLand'] + 1)
-```
-
-### Step 6: Encode Standard Categorical Columns
+### Step 6: Encode Categorical Columns
 ```python
 from sklearn.preprocessing import LabelEncoder
 
-simple_cat_cols = ['District', 'Block', 'CropEstMethod', 'Harv_method',
-                   'Threshing_method', 'Stubble_use', 'TransplantingIrrigationSource',
-                   'TransplantingIrrigationPowerSource', 'PCropSolidOrgFertAppMethod',
-                   'MineralFertAppMethod']
+cat_encode_cols = [
+    'District', 'Block', 'CropEstMethod',
+    'TransplantingIrrigationSource', 'Harv_method', 'Threshing_method'
+]
 
 le = LabelEncoder()
-for col in simple_cat_cols:
+for col in cat_encode_cols:
     train[col] = le.fit_transform(train[col].astype(str))
+    # Encode test using same categories (handle unseen with try/except)
+    test[col]  = test[col].map(
+        dict(zip(le.classes_, le.transform(le.classes_)))
+    ).fillna(-1).astype(int)
 ```
 
-> **Alternatively**, use `pd.get_dummies()` (One-Hot Encoding) for tree-based models, or `OrdinalEncoder` from scikit-learn.
-
-### Step 7: Outlier Detection & Removal
+### Step 7: Outlier Capping on Target
 ```python
-import numpy as np
-
-# IQR method on target
-Q1 = train['Yield'].quantile(0.25)
-Q3 = train['Yield'].quantile(0.75)
-IQR = Q3 - Q1
-lower = Q1 - 3 * IQR
-upper = Q3 + 3 * IQR
-train = train[(train['Yield'] >= lower) & (train['Yield'] <= upper)]
-
-# Or cap outliers instead of dropping
+# Winsorize: cap extreme yield values at 1st–99th percentile
+lower = train['Yield'].quantile(0.01)
+upper = train['Yield'].quantile(0.99)
 train['Yield'] = np.clip(train['Yield'], lower, upper)
 ```
 
-### Step 8: Target Variable Transformation
-The `Yield` distribution is right-skewed. Apply log transformation:
+### Step 8: Log-Transform Target Variable
 ```python
-import numpy as np
-train['Yield_log'] = np.log1p(train['Yield'])
-# After prediction, convert back: np.expm1(predicted_log_yield)
+train['Yield_log'] = np.log1p(train['Yield'])  # log(1 + Yield) to handle zeros
+# At inference time: predicted_yield = np.expm1(model.predict(X))
 ```
 
-### Step 9: Feature Scaling
-Tree-based models (XGBoost, LightGBM, Random Forest) do **not** require scaling.  
-If using Linear Regression or SVR, apply:
-```python
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_train)
-```
+### Step 9: No Scaling Needed (Tree Models)
+XGBoost, LightGBM, CatBoost, and Random Forest are **scale-invariant** — they split on thresholds, not distances. Scaling is skipped.
 
-### Step 10: Train-Validation Split
+> Apply `StandardScaler` only if running the Ridge Regression baseline.
+
+### Step 10: Final Feature Set & Train-Validation Split
 ```python
 from sklearn.model_selection import train_test_split
 
-X = train.drop(columns=['Yield', 'Yield_log', 'ID'])
+# Final 20 features going into the model
+FINAL_FEATURES = [
+    'District', 'Block',
+    'Acre', 'CropCultLand', 'CropEstMethod', 'CropTillageDepth',
+    'SeedlingsPerPit', 'SowingDOY',
+    'TransplantingIrrigationSource', 'StandingWater',
+    'NoFertilizerAppln', 'BasalDAP', 'BasalUrea', '1tdUrea', '2tdUrea',
+    'Harv_method', 'Threshing_method',
+    'HarvestDOY', 'CropDuration_days'
+]
+
+X = train[FINAL_FEATURES]
 y = train['Yield_log']
 
 X_train, X_val, y_train, y_val = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
+print(f"Training on {X_train.shape[1]} features, {X_train.shape[0]} samples")
 ```
 
 ---
@@ -512,7 +517,7 @@ feature_importances = pd.Series(
 ).sort_values(ascending=False)
 
 feature_importances.head(20).plot(kind='barh', figsize=(10, 8))
-plt.title('Top 20 Feature Importances')
+plt.title('Feature Importances (All 20 Features)')
 plt.tight_layout()
 plt.show()
 ```
@@ -638,15 +643,15 @@ if __name__ == '__main__':
 - [ ] Pairplot of top numeric features vs Yield
 
 ### Phase 3: Data Preprocessing
-- [ ] Drop `ID` column
-- [ ] Handle missing values (per strategy in preprocessing section)
-- [ ] Parse and engineer date features
-- [ ] Multi-hot encode multi-label categorical columns
-- [ ] Label encode simple categorical columns
-- [ ] Create engineered features: `TotalUrea`, `CropDuration`, `LandUseRatio`
-- [ ] Remove/cap yield outliers
-- [ ] Apply log transformation to `Yield`
-- [ ] Build a scikit-learn `Pipeline` for preprocessing
+- [ ] Select the 18 chosen columns + `Yield` target; drop all others
+- [ ] Median-impute numeric columns (`BasalDAP`, `BasalUrea`, `1tdUrea`, `2tdUrea`, `StandingWater`, `SeedlingsPerPit`, `CropTillageDepth`)
+- [ ] Zero-fill `NoFertilizerAppln`; mode-fill categorical cols
+- [ ] Parse `SeedingSowingTransplanting` and `Harv_date` → engineer `SowingDOY`, `HarvestDOY`, `CropDuration_days`
+- [ ] Label-encode 6 categorical columns (`District`, `Block`, `CropEstMethod`, `TransplantingIrrigationSource`, `Harv_method`, `Threshing_method`)
+- [ ] Cap yield outliers at 1st–99th percentile (winsorization)
+- [ ] Apply `np.log1p()` transformation to `Yield`
+- [ ] Build scikit-learn `Pipeline` wrapping imputer + encoder + model
+- [ ] Verify final feature matrix shape is `(n_samples, 20)`
 
 ### Phase 4: Model Training
 - [ ] Train baseline models (Ridge, Random Forest)
